@@ -1,25 +1,44 @@
+/*
+* Copyright (c) 2022 DWVoid and Infinideastudio Team
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+*/
+
 #include "ActiveFile.h"
 #include "kls/thread/SpinWait.h"
 #include "kls/essential/Unsafe.h"
+#include "kls/coroutine/Operation.h"
 
 namespace kls::journal::rotating_file::detail {
     static constexpr auto FileOption = io::Block::F_CREAT | io::Block::F_WRITE;
 
     static LazyFile open_file(const fs::path &base, uint64_t id) {
-        auto path = base / std::format("{}.{}", id, FileExtension);
+        auto path = base / std::format("{}{}", id, FileExtension);
         auto path_string = path.generic_string();
         auto handle = co_await io::open_block(path_string, FileOption);
         co_return std::move(handle);
     }
 
-    ActiveFile::ActiveFile(const fs::path &base, uint64_t id) :
-            m_file(open_file(base, id)),
-            m_buffer(reinterpret_cast<void *>(essential::rent_4m_block()), MaxFileSize) {
-    }
+    ActiveFile::ActiveFile(const fs::path &base, uint64_t id) : m_file(open_file(base, id)), m_buffer{} {}
 
     coroutine::ValueAsync<> ActiveFile::close() {
         if (m_last_writer) co_await std::move(m_last_writer);
-        essential::return_4m_block(reinterpret_cast<uintptr_t>(m_buffer.data()));
         co_await ((co_await m_file)->close());
     }
 
@@ -35,7 +54,7 @@ namespace kls::journal::rotating_file::detail {
             if (m_allocation_offset.compare_exchange_weak(allocation, end_offset)) break;
         }
         // trim the buffer to get the allocated segment as a span
-        auto buffer_view = essential::static_span_cast<char>(record).trim_front(allocation);
+        auto buffer_view = essential::static_span_cast<char>(m_buffer.span()).trim_front(allocation);
         // write the message header
         const auto header = uint32_t(record_view.size()) << uint32_t(8) | uint32_t(type);
         essential::Access<endian>(buffer_view).put<uint32_t>(0, header);
@@ -78,18 +97,24 @@ namespace kls::journal::rotating_file::detail {
 
     coroutine::ValueAsync<> ActiveFile::batch_writer_work(coroutine::ValueAsync<> last) {
         auto &file = co_await m_file;
-        std::unique_lock lk{m_sequence};
-        for (;;) {
-            auto promise = batch_writer_live();
-            int32_t start_offset = m_file_offset, end_offset = m_batch_offset;
-            lk.unlock();
-            try {
-                auto batched_span = m_buffer.keep_front(end_offset).trim_front(start_offset);
-                (co_await file->write(batched_span, start_offset)).get_result(), promise->set();
+        co_await coroutine::Redispatch{};
+        {
+            std::unique_lock lk{m_sequence};
+            for (;;) {
+                auto promise = batch_writer_live();
+                int32_t start_offset = m_file_offset, end_offset = m_batch_offset;
+                lk.unlock();
+                try {
+                    auto batched_span = m_buffer.span().keep_front(end_offset).trim_front(start_offset);
+                    (co_await file->write(batched_span, start_offset)).get_result(), promise->set();
+                }
+                catch (...) { promise->fail(std::current_exception()); }
+                lk.lock();
+                if (m_batch_writer_stage != BS_PENDING) {
+                    m_batch_writer_stage = BS_NONE;
+                    break;
+                }
             }
-            catch (...) { promise->fail(std::current_exception()); }
-            lk.lock();
-            if (m_batch_writer_stage != BS_PENDING) co_return void(m_batch_writer_stage = BS_NONE);
         }
         if (last) co_await std::move(last); // consume the future for the last writer to minimize blocking
     }

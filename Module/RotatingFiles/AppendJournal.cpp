@@ -1,3 +1,25 @@
+/*
+* Copyright (c) 2022 DWVoid and Infinideastudio Team
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+*/
+
 #include <format>
 #include <vector>
 #include "Common.h"
@@ -30,7 +52,7 @@ namespace kls::journal::rotating_file::detail {
 
     coroutine::ValueAsync<> AppendJournal::append_internal(int8_t type, essential::Span<> record) {
         std::unique_lock lk{m_lock, std::adopt_lock};
-        m_segment_empty = true;
+        m_segment_empty = false;
         coroutine::ValueAsync<> to_close{};
         for (;;) {
             if (m_files.empty()) break;
@@ -49,14 +71,14 @@ namespace kls::journal::rotating_file::detail {
         auto commit_hint = *file.append(RTypeCheck, hint.span());
         auto commit_record = *file.append(type, record);
         if (to_close)
-            return coroutine::awaits(to_close, commit_hint, commit_record);
+            return coroutine::awaits(std::move(to_close), std::move(commit_hint), std::move(commit_record));
         else
-            return coroutine::awaits(commit_hint, commit_record);
+            return coroutine::awaits(std::move(commit_hint), std::move(commit_record));
     }
 
     coroutine::ValueAsync<uint64_t> AppendJournal::register_checkpoint() {
         std::unique_lock lk{m_lock};
-        if (m_segment_empty) co_return get_current_checkpoint(); else m_segment_empty = false;
+        if (m_segment_empty) co_return get_current_checkpoint(); else m_segment_empty = true;
         m_checkpoints[m_next_checkpoint++] = m_files.back().id();
         auto current_checkpoint = get_current_checkpoint();
         auto record = CheckRecord(get_last_checkpoint(), current_checkpoint);
