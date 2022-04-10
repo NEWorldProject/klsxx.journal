@@ -50,7 +50,7 @@ namespace kls::journal::rotating_file::detail {
         Buffer(Buffer &&o) noexcept: m_b(o.m_b) { o.m_b = 0; }
         Buffer &operator=(Buffer &&o) noexcept { return (std::swap(m_b, o.m_b), *this); }
         ~Buffer() { if (m_b) essential::return_4m_block(m_b); }
-        [[nodiscard]] essential::Span<> span() const noexcept { return {reinterpret_cast<void *>(m_b), MaxFileSize}; }
+        [[nodiscard]] Span<> span() const noexcept { return {reinterpret_cast<void *>(m_b), MaxFileSize}; }
     private:
         uintptr_t m_b = essential::rent_4m_block();
     };
@@ -65,7 +65,7 @@ namespace kls::journal::rotating_file::detail {
         };
         explicit AppendFile(fs::path &base, std::uint64_t id);
         [[nodiscard]] uint64_t id() const noexcept { return m_id; }
-        [[nodiscard]] std::optional<coroutine::FlexFuture<>> append(int8_t type, essential::Span<> record);
+        [[nodiscard]] std::optional<coroutine::FlexFuture<>> append(int8_t type, Span<> record);
         [[nodiscard]] coroutine::ValueAsync<> close();
         void remove();
     private:
@@ -78,7 +78,7 @@ namespace kls::journal::rotating_file::detail {
     class AppendJournal : public kls::journal::AppendJournal {
     public:
         explicit AppendJournal(const fs::path &base);
-        [[nodiscard]] coroutine::ValueAsync<> append(essential::Span<> record) override;
+        [[nodiscard]] coroutine::ValueAsync<> append(Span<> record) override;
         [[nodiscard]] coroutine::ValueAsync<uint64_t> register_checkpoint() override;
         [[nodiscard]] coroutine::ValueAsync<> check_checkpoint() override;
         [[nodiscard]] coroutine::ValueAsync<> close() override;
@@ -94,7 +94,7 @@ namespace kls::journal::rotating_file::detail {
             if (m_checkpoints.empty()) return get_current_checkpoint(); else return m_checkpoints.begin()->first;
         }
         uint64_t get_current_checkpoint() const noexcept { return m_next_checkpoint; }
-        coroutine::ValueAsync<> append_internal(int8_t type, essential::Span<> record);
+        coroutine::ValueAsync<> append_internal(int8_t type, Span<> record);
     };
 
     fs::path prepare_path(const fs::path &path);

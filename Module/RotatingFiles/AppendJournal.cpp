@@ -20,6 +20,7 @@
 * SOFTWARE.
 */
 
+#include <mutex>
 #include <format>
 #include <vector>
 #include "Common.h"
@@ -36,7 +37,7 @@ namespace kls::journal::rotating_file::detail {
             access.put(0, last);
             access.put(8, now);
         }
-        essential::Span<> span() & noexcept { return {buffer, 16}; }
+        Span<> span() & noexcept { return {buffer, 16}; }
     };
 
     AppendJournal::AppendJournal(const fs::path &base) : m_base(prepare_path(base)) {
@@ -44,13 +45,13 @@ namespace kls::journal::rotating_file::detail {
             throw std::runtime_error(std::format(err_non_empty, base.generic_string()));
     }
 
-    coroutine::ValueAsync<> AppendJournal::append(essential::Span<> record) {
+    coroutine::ValueAsync<> AppendJournal::append(Span<> record) {
         if (record.size() + 4 > MaxRecordSize) throw std::runtime_error("journal record size too large");
         m_lock.lock();
         return append_internal(RTypeData, record);
     }
 
-    coroutine::ValueAsync<> AppendJournal::append_internal(int8_t type, essential::Span<> record) {
+    coroutine::ValueAsync<> AppendJournal::append_internal(int8_t type, Span<> record) {
         std::unique_lock lk{m_lock, std::adopt_lock};
         m_segment_empty = false;
         coroutine::ValueAsync<> to_close{};

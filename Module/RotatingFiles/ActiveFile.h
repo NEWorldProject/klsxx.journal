@@ -32,7 +32,7 @@ namespace kls::journal::rotating_file::detail {
     class ActiveFile : public AddressSensitive {
     public:
         explicit ActiveFile(const fs::path &base, std::uint64_t id);
-        std::optional<coroutine::FlexFuture<>> append(int8_t type, essential::Span<> record);
+        std::optional<coroutine::FlexFuture<>> append(int8_t type, Span<> record);
         coroutine::ValueAsync<> close();
     private:
         LazyFile m_file;

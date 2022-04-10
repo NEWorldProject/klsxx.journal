@@ -29,8 +29,8 @@
 #include "kls/coroutine/Operation.h"
 
 TEST(kls_journal, JournalEcho) {
+    using namespace kls;
     using namespace kls::journal;
-    using namespace kls::essential;
     using namespace kls::coroutine;
 
     auto to_hex = [](Span<char> span) -> std::string {

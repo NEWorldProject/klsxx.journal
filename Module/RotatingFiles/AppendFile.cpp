@@ -27,7 +27,7 @@ namespace kls::journal::rotating_file::detail {
     AppendFile::AppendFile(fs::path &base, std::uint64_t id) :
             m_base(base), m_id(id), m_active(std::make_shared<ActiveFile>(base, id)) {}
 
-    std::optional<coroutine::FlexFuture<>> AppendFile::append(int8_t type, essential::Span<> record) {
+    std::optional<coroutine::FlexFuture<>> AppendFile::append(int8_t type, Span<> record) {
         if (m_state == S_ACTIVE) {
             const auto active = static_cast<ActiveFile *>(m_active.get());
             return active->append(type, record);

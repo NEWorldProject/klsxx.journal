@@ -20,6 +20,7 @@
 * SOFTWARE.
 */
 
+#include <mutex>
 #include "ActiveFile.h"
 #include "kls/thread/SpinWait.h"
 #include "kls/essential/Unsafe.h"
@@ -42,10 +43,10 @@ namespace kls::journal::rotating_file::detail {
         co_await ((co_await m_file)->close());
     }
 
-    std::optional<coroutine::FlexFuture<>> ActiveFile::append(int8_t type, essential::Span<> record) {
+    std::optional<coroutine::FlexFuture<>> ActiveFile::append(int8_t type, Span<> record) {
         // try to allocate space for the commit operation, return nullopt on failure
         // since we need the allocation counter to correctly close the file, we need to do CAS
-        auto record_view = essential::static_span_cast<char>(record);
+        auto record_view = static_span_cast<char>(record);
         int32_t allocation{}, end_offset{};
         for (;;) {
             allocation = m_allocation_offset.load();
@@ -54,7 +55,7 @@ namespace kls::journal::rotating_file::detail {
             if (m_allocation_offset.compare_exchange_weak(allocation, end_offset)) break;
         }
         // trim the buffer to get the allocated segment as a span
-        auto buffer_view = essential::static_span_cast<char>(m_buffer.span()).trim_front(allocation);
+        auto buffer_view = static_span_cast<char>(m_buffer.span()).trim_front(allocation);
         // write the message header
         const auto header = uint32_t(record_view.size()) << uint32_t(8) | uint32_t(type);
         essential::Access<endian>(buffer_view).put<uint32_t>(0, header);

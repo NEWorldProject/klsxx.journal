@@ -29,7 +29,7 @@
 
 namespace kls::journal {
     struct AppendJournal: PmrBase {
-        [[nodiscard]] virtual coroutine::ValueAsync<> append(essential::Span<> record) = 0;
+        [[nodiscard]] virtual coroutine::ValueAsync<> append(Span<> record) = 0;
         [[nodiscard]] virtual coroutine::ValueAsync<uint64_t> register_checkpoint() = 0;
         [[nodiscard]] virtual coroutine::ValueAsync<> check_checkpoint() = 0;
         [[nodiscard]] virtual coroutine::ValueAsync<> close() = 0;
@@ -39,7 +39,7 @@ namespace kls::journal {
 
     struct JournalRecord {
         int8_t type;
-        essential::Span<> data;
+        Span<> data;
     };
 
     coroutine::AsyncGenerator<JournalRecord> recover_file_journal(std::string_view path);
