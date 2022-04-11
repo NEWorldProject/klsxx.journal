@@ -32,7 +32,7 @@ namespace kls::journal::rotating_file::detail {
     static LazyFile open_file(const fs::path &base, uint64_t id) {
         auto path = base / std::format("{}{}", id, FileExtension);
         auto path_string = path.generic_string();
-        auto handle = co_await io::open_block(path_string, FileOption);
+        auto handle = co_await io::Block::open(path_string, FileOption);
         co_return std::move(handle);
     }
 

@@ -35,7 +35,7 @@ namespace kls::journal::rotating_file::detail {
     static auto open_with_id(const fs::path &base, uint64_t id) {
         auto path = base / std::format("{}{}", id, FileExtension);
         auto path_string = path.generic_string();
-        return io::open_block(path_string, FileOption);
+        return io::Block::open(path_string, FileOption);
     }
 }
 

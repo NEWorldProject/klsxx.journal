@@ -27,7 +27,7 @@
 #include "kls/io/Block.h"
 
 namespace kls::journal::rotating_file::detail {
-    using LazyFile = coroutine::LazyAsync<std::unique_ptr<io::Block>>;
+    using LazyFile = coroutine::LazyAsync<SafeHandle<io::Block>>;
 
     class ActiveFile : public AddressSensitive {
     public:
