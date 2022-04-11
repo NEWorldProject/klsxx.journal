@@ -20,10 +20,10 @@
 * SOFTWARE.
 */
 
-#include <format>
 #include <charconv>
 #include <filesystem>
 #include <gtest/gtest.h>
+#include "kls/Format.h"
 #include "kls/journal/Journal.h"
 #include "kls/coroutine/Blocking.h"
 #include "kls/coroutine/Operation.h"
@@ -64,9 +64,9 @@ TEST(kls_journal, JournalEcho) {
             std::string formatted{};
             auto range = static_span_cast<char>(record.data);
             if (record.type == 0)
-                formatted = std::format("[0:{}]:{}", range.size(), std::string_view(range.begin(), range.end()));
+                formatted = kls::format("[0:{}]:{}", range.size(), std::string_view(range.begin(), range.end()));
             else
-                formatted = std::format("[{}:{}]:{}", record.type, range.size(), to_hex(range));
+                formatted = kls::format("[{}:{}]:{}", record.type, range.size(), to_hex(range));
             std::cout << formatted << std::endl;
         }
         co_return true;

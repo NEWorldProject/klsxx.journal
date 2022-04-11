@@ -20,10 +20,10 @@
 * SOFTWARE.
 */
 
-#include "Common.h"
 #include <set>
-#include <format>
 #include <charconv>
+#include "Common.h"
+#include "kls/Format.h"
 
 static constexpr auto err_not_a_directory = "given path for journal is not a directory: {}";
 static constexpr auto err_duplicate_id = "journal with id {} in directory {} has a duplicate";
@@ -34,7 +34,7 @@ namespace kls::journal::rotating_file::detail {
         auto absolute = fs::absolute(path);
         if (fs::exists(absolute)) {
             if (fs::is_directory(absolute)) return absolute;
-            throw std::runtime_error(std::format(err_not_a_directory, absolute.generic_string()));
+            throw std::runtime_error(kls::format(err_not_a_directory, absolute.generic_string()));
         }
         return fs::create_directories(absolute), absolute;
     }
@@ -51,14 +51,14 @@ namespace kls::journal::rotating_file::detail {
             auto [ptr, ec] { std::from_chars(stem.data(), end_ptr, result) };
             if (ec == std::errc() && ptr == end_ptr) {
                 if (files.contains(result))
-                    throw std::runtime_error(std::format(err_duplicate_id, result, root.generic_string()));
+                    throw std::runtime_error(kls::format(err_duplicate_id, result, root.generic_string()));
                 files.insert(result);
             }
         }
         if (files.empty()) return {0, 0};
         auto result = std::pair(*files.begin(), *files.rbegin());
         if ((result.second - result.first) != (files.size() - 1))
-            throw std::runtime_error(std::format(err_missing_id, root.generic_string(), result.first, result.second));
+            throw std::runtime_error(kls::format(err_missing_id, root.generic_string(), result.first, result.second));
         return result;
     }
 }

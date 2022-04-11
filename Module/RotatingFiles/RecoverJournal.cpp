@@ -20,9 +20,9 @@
 * SOFTWARE.
 */
 
-#include <format>
 #include <vector>
 #include "Common.h"
+#include "kls/Format.h"
 #include "kls/io/Block.h"
 #include "kls/essential/Unsafe.h"
 #include "kls/coroutine/Operation.h"
@@ -33,7 +33,7 @@ namespace kls::journal::rotating_file::detail {
     static constexpr auto FileOption = io::Block::F_READ;
 
     static auto open_with_id(const fs::path &base, uint64_t id) {
-        auto path = base / std::format("{}{}", id, FileExtension);
+        auto path = base / kls::format("{}{}", id, FileExtension);
         auto path_string = path.generic_string();
         return io::Block::open(path_string, FileOption);
     }

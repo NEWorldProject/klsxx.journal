@@ -22,6 +22,7 @@
 
 #include <mutex>
 #include "ActiveFile.h"
+#include "kls/Format.h"
 #include "kls/thread/SpinWait.h"
 #include "kls/essential/Unsafe.h"
 #include "kls/coroutine/Operation.h"
@@ -30,7 +31,7 @@ namespace kls::journal::rotating_file::detail {
     static constexpr auto FileOption = io::Block::F_CREAT | io::Block::F_WRITE;
 
     static LazyFile open_file(const fs::path &base, uint64_t id) {
-        auto path = base / std::format("{}{}", id, FileExtension);
+        auto path = base / kls::format("{}{}", id, FileExtension);
         auto path_string = path.generic_string();
         auto handle = co_await io::Block::open(path_string, FileOption);
         co_return std::move(handle);

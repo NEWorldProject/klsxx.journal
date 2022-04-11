@@ -21,9 +21,9 @@
 */
 
 #include <mutex>
-#include <format>
 #include <vector>
 #include "Common.h"
+#include "kls/Format.h"
 #include "kls/essential/Unsafe.h"
 #include "kls/coroutine/Operation.h"
 
@@ -42,7 +42,7 @@ namespace kls::journal::rotating_file::detail {
 
     AppendJournal::AppendJournal(const fs::path &base) : m_base(prepare_path(base)) {
         if (auto&&[a, b] = scan_files(base); a || b)
-            throw std::runtime_error(std::format(err_non_empty, base.generic_string()));
+            throw std::runtime_error(kls::format(err_non_empty, base.generic_string()));
     }
 
     coroutine::ValueAsync<> AppendJournal::append(Span<> record) {

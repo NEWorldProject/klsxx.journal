@@ -22,6 +22,7 @@
 
 #include "Common.h"
 #include "ActiveFile.h"
+#include "kls/Format.h"
 
 namespace kls::journal::rotating_file::detail {
     AppendFile::AppendFile(fs::path &base, std::uint64_t id) :
@@ -44,6 +45,6 @@ namespace kls::journal::rotating_file::detail {
 
     void AppendFile::remove() {
         if (m_state != S_STUB) throw std::logic_error("invalid state"); else m_state = S_REMOVED;
-        fs::remove(m_base / std::format("{}.{}", m_id, FileExtension));
+        fs::remove(m_base / kls::format("{}.{}", m_id, FileExtension));
     }
 }
